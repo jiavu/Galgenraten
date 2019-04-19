@@ -2,6 +2,9 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  //////////////////////////////////////////////////////////////////
+  // 
+
 	// Digitales Wörterbuch der deutschen Sprache API:
 	const url = "https://www.dwds.de/api/wb/snippet";
 	// Because Access-Control-Allow-Origin Header is missing:
@@ -20,15 +23,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const socket = io.connect();
 
-	// Helper:
+  //////////////////////////////////////////////////////////////////
+  // HELPER:
+
 	function resetClassHideElements() {
 		// Reset hide sections and divisions:
 		for (let i = 0; i < classHide.length; i++) {
 			classHide[i].classList.add("hidden");
 		}
 	}
-	
-	// LISTENING:
+  
+  //////////////////////////////////////////////////////////////////
+  // LISTENING:
+  
 	socket.on("message", data => {
 		data = JSON.parse(data);
 		messageBox.innerHTML = data.msg;
@@ -39,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 
 
-	// Get Game States from Server:
+	// GET GAME STATES FROM SERVER:
 	socket.on("gameState", data => {
 		data = JSON.parse(data);
 		
@@ -67,10 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	submitWord.onsubmit = e => {
 		e.preventDefault();
 		dictResult.innerHTML = "";
-		let word = wordInput.value;
-		word = word.slice(0,1) + word.slice(1).toLowerCase();
-		wordInput.value = "";
-		//e.target.querySelector("button").disabled = true;
+    let word = wordInput.value;
+    word = word.slice(0,1).toUpperCase() + word.slice(1).toLowerCase();
+    wordInput.value = "";
+		e.target.querySelector("[type='submit']").disabled = true;
 		wordSelection.classList.add("hidden");
 
 		// Send a message to websocket server: Request is sent, Wort wird nachgeschlagen.
@@ -99,21 +106,24 @@ document.addEventListener('DOMContentLoaded', () => {
 						Definition: <a href=${data[0].url} target="_blank">www.dwds.de/</a>`;
 				if (data[0].wortart === "Substantiv") {
 					socket.emit("submitWord", JSON.stringify({
-						state: "wordisNoun",
+						state: "wordIsNoun",
 						word: data[0].lemma
 					}));
 				} else {
 					dictResult.innerHTML = "Dies ist kein Substantiv. Bitte suche ein anderes Wort aus.";
-					wordSelection.classList.remove("hidden");
+          wordSelection.classList.remove("hidden");
+          // Cursor auf Eingabe
 					socket.emit("submitWord", JSON.stringify({
 						state: "invalidWord",
 					}));
 				}
-				
 			} else {
-				dictResult.innerHTML = "...konnte dieses Wort nicht finden. Bitte suche ein anderes Wort aus.";
-				// continue here...
-				// Eingabe wieder einblenden.
+        dictResult.innerHTML = "...konnte dieses Wort nicht finden. Bitte suche ein anderes Wort aus.";
+        wordSelection.classList.remove("hidden");
+        // Cursor auf Eingabe
+        socket.emit("submitWord", JSON.stringify({
+          state: "invalidWord",
+        }));
 			}
 		});
 	};
@@ -121,15 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Restrict Players input. Only Letters accepted.
 	// and activate Submit if input has length.
 	const handleInput = e => {
-		// eher replace all, die nicht letters sind
-		if ( ! /^[A-Za-zÄäÖöÜüß]+$/.test(e.target.value) ) {
-			e.target.value = "";
-		} else {
-			if (e.target.value !== "ß") {
-				e.target.value = e.target.value.toUpperCase();
-			}
-		}
-		const submitButton = e.target.parentNode.querySelector("button");
+    e.target.value = e.target.value.replace(/[^A-Za-zÄäÖöÜüß]/g, "");
+		const submitButton = e.target.parentNode.querySelector("[type='submit']");
 		submitButton.disabled = e.target.value ? false : true;
 		
 	};

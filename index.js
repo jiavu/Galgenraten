@@ -56,6 +56,7 @@ class StateToSend {
 // Helper
 
 function registerPlayer(socket, no) {
+  console.log("Player registriert. Player Nr.: " + no);
 	players.push( new Player(socket, no) );
 	players.forEach( p => {
 		let info = `Du bist ${p.name}.`;
@@ -71,6 +72,7 @@ function registerPlayer(socket, no) {
 // Game States
 
 function raffleBeginner() {
+  console.log("raffleBeginner");
 	let gameState = "raffleBeginner";
 	// raffling the beginner:
 	let rand = Math.random() * 200 + 1;
@@ -94,14 +96,10 @@ function raffleBeginner() {
 		});
 
 		setTimeout( ()=> {
-			let msg;
 
-			// players are undefined sometimes. Promise needed? :/
-			const getPlayers = () => {
-				return new Promise( (resolve, reject) => {
-					// get riddler, get candidate
-				})
-			}
+      // issue:
+      // if both clients reconnect immedately one after another,
+      // .name can be undefined...
 			
 			let riddler = players.find( p => p.isRiddler );
 			let candidate = players.find( p => !p.isRiddler );
@@ -142,8 +140,8 @@ function chooseWord(riddler, candidate) {
 	));
 
 	riddler.socket.on("submitWord", data => {
-		data = JSON.parse(data);
-
+    data = JSON.parse(data);
+    
 		switch (data.state) {
 			case "sentToAPI":
 				msg = masterSays.lookUpWord;
@@ -163,7 +161,10 @@ function chooseWord(riddler, candidate) {
 				candidate.socket.emit("message", JSON.stringify( {msg:msg_candidate} ));
 				break;
 			case "wordIsNoun":
-				console.log(data.word);
+        console.log(data.word);
+        // hier geht es weiter.
+        // Sende eine kurze Nachricht an alle (setTimeout).
+        // rufe dann nächste gamestate function auf.
 				break;
 		}
 	} );
@@ -186,6 +187,7 @@ function gameTermination(id) {
 io.on('connection', socket => {
 	// Resctriction: only 2 Players:
 	if (players.length < maxPlayers) {
+    console.log(new Date());
 		console.log(socket.id + " hat die Verbindung hergestellt");
 
 		let msg = masterSays.welcome;
@@ -201,6 +203,7 @@ io.on('connection', socket => {
 
 		// HANDLING DISCONNECTION
 		socket.on('disconnect', () => {
+      console.log(new Date());
 			console.log(socket.id + " hat die Verbindung unterbrochen.");
 			
 			players = players.filter( p => p.id !== socket.id );

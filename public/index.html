@@ -5,23 +5,26 @@
 	<meta charset="utf-8" />
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<title>GALGEN_ATEN</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<!-- Styles -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- FONTS -->
+  <link href="https://fonts.googleapis.com/css?family=Alegreya+SC|Almendra+SC|Balthazar|Cormorant+Unicase|IM+Fell+English+SC|IM+Fell+Great+Primer+SC" rel="stylesheet">
+	<!-- STYLES -->
 	<link rel="stylesheet" type="text/css" media="screen" href="./styles/main.css" />
-	<!-- Scripts(1) -->
-	<!-- warum funktioniert das hier? Ich finde den Pfad nicht. -->
+	<!-- SCRIPTS(1) -->
+	<!-- warum funktioniert das hier überhaupt? Ich finde diesen Pfad nicht: -->
 	<script src="/socket.io/socket.io.js"></script>
 </head>
 
 <body>
 	<div class="main-container">
-			<h1>GALGEN_ATEN</h1>
-
+    <section style="border: 4px double grey">
+      <h1>GALGEN_ATEN</h1>
+    </section>
 			<section>
 				<p id="info-box"></p>
 			</section>
 			<section>
-				<h4>SpielMaster sagt:</h4>
+				<h4>Der Spiel-Master sagt...</h4>
 				<p id="message-box"></p>
 			</section>
 			<section id="riddle" class="hide hidden">
@@ -37,7 +40,7 @@
 					<form>
 						<input type="text" maxlength="1"
 								id="guess-input" size="1">
-						<button type="submit" disabled>Einreichen</button>
+						<input type="submit" value="Einreichen" disabled />
 					</form>
 				</div>
 				<div>
@@ -55,7 +58,7 @@
 					<h3>Wähle ein Wort...</h3>
 					<form id="submit-word">
 						<input type="text" id="word-input">
-						<button type="submit" disabled>Einreichen</button>
+						<input type="submit" value="Einreichen" disabled />
 					</form>
 				</div>		
 				<div id="dictionary" class="hide hidden">
