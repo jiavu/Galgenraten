@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>GALGEN_ATEN</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<!-- Styles -->
+	<link rel="stylesheet" type="text/css" media="screen" href="./styles/main.css" />
+	<!-- Scripts(1) -->
+	<!-- warum funktioniert das hier? Ich finde den Pfad nicht. -->
+	<script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+	<div class="main-container">
+			<h1>GALGEN_ATEN</h1>
+
+			<section>
+				<p id="info-box"></p>
+			</section>
+			<section>
+				<h4>SpielMaster sagt:</h4>
+				<p id="message-box"></p>
+			</section>
+			<section id="riddle" class="hide hidden">
+				<div>
+					<h3>Rätsel</h3>
+					<p id="enigma">
+						<!-- Jeder Buchstabe als Span? -->
+						_ _ _ _ _ _ _ _ _ _ _ _
+					</p>
+				</div>
+				<div id="guess-div" class="hide">
+					<span>Deine Annahme:</span>
+					<form>
+						<input type="text" maxlength="1"
+								id="guess-input" size="1">
+						<button type="submit" disabled>Einreichen</button>
+					</form>
+				</div>
+				<div>
+					<h3>Hinrichtungsfortschritt:</h3>
+					<div id="gallow-wrapper">
+						<div id="wrong-guesses" style="text-decoration: line-through">
+							B
+						</div>
+						<div id="gallow">-Galgen-</div>
+					</div>
+				</div>
+			</section>
+			<section id="section-word" class="hide hidden">
+				<div id="word-selection" class="hide hidden">
+					<h3>Wähle ein Wort...</h3>
+					<form id="submit-word">
+						<input type="text" id="word-input">
+						<button type="submit" disabled>Einreichen</button>
+					</form>
+				</div>		
+				<div id="dictionary" class="hide hidden">
+					<h5>Digitales Wörterbuch der deutschen Sprache:</h5>
+					<p id="dict-result"></p>
+				</div>
+			</section>
+	</div>
+	
+	<script src="./scripts/main.js"></script>
+</body>
+
+</html>

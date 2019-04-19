@@ -1,0 +1,55 @@
+===============
+= GALGENRATEN =
+===============
+
+Multiplayer-Mode:
+Der eine gibt ein Wort vor. Der andere muss es erraten.
+Die Überprüfung findet serverseitig statt.
+Der Galgen wird mit canvas gezeichnet.
+
+Regeln:
+- Nur Substantive
+- Nur im dwds registrierte Wörter.
+
+Features (je nach verfügbarer Zeit für die Projektarbeit):
+------------------------
+Es wird eine Überprüfung stattfinden, ob es dieses Wort gibt.
+(Dictionary API... finde ich eine auf deutsch, im Idealfall ohne Key und Account?)
+
+(Nach API-Abfrage) Hinweise, ob das Wort ein Hauptwort oder ein Adj usw. ist.
+Oder: Nur Hauptwörter akzeptiert, Überprüfe nach API-Abfrage.
+
+API:
+----
+Digitales Wörterbuch der deutschen Sprache
+https://www.dwds.de/d/api           // scheinbar auch kein Key notwendig
+
+Abfrage: https://www.dwds.de/api/wb/snippet?q=Haus
+Ergebnis: [{"wortart":"Substantiv","input":"Haus","lemma":"Haus","url":"https://www.dwds.de/wb/Haus"}]
+    - Wort nicht registriert: [] leeres Array.
+    - Homografen (z. B. Bank): Mehrere Objects im Array.
+    - alte Schreibweise eingegeben: richtige Schreibweise ist value von "lemma".
+    - es gibt auch Einträge ohne verzeichnete Wortart.
+
+========================================================
+
+To Do:
+------
+
+- Die API-Abfrage ist auch über Proxy nicht immer erfolgreich.
+    Wenn die API-Abfrage nicht möglich ist, was dann?
+
+
+========================================================
+TechStack:
+----------
+nodeJS
+Server (Express)
+Websocket.io
+API dwds.de
+http request
+
+
+========================================================
+Sonstiges:
+https://www.openthesaurus.de/about/api  // kein Key notwendig

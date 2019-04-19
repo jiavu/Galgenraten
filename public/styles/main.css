@@ -1,0 +1,71 @@
+:root {
+    font-size: 20px;
+    font-family: sans-serif;
+    /* CSS Variables: */
+    --player : hsl(115, 100%, 40%);
+    --otherPlayer : hsl(0, 100%, 40%);
+    --gameMaster : hsl(194, 100%, 40%);
+    --trans-time : 2s;
+}
+.main-container {
+    margin: 0 auto;
+    min-width: 320px;
+    max-width: 600px;
+}
+section {
+    border-bottom: 2px solid grey;
+}
+h4 {
+    font-weight: normal;
+    text-decoration: underline;
+    font-size: 0.8rem;
+}
+.player { color: var(--player); }
+.opponent { color: var(--otherPlayer); }
+.hidden { display: none; }
+
+#info-box {
+    text-align: right;
+    font-size: 0.7rem;
+    color: var(--player);
+}
+#message-box {
+    line-height: 1.5;
+    font-style: italic;
+    font-size: 1.1rem;
+    /* font-weight: bold; */
+    color: var(--gameMaster);
+    /* doesn't work yet: */
+    transition: all var(--trans-time);
+}
+#guess-div { text-align: center; }
+#guess-input {
+    margin-left: 1rem;
+    padding: 0.3rem;
+    background-image: none;
+    font: 2.8rem monospace;
+    width: 4rem;
+    text-align: center;
+}
+#gallow-wrapper {
+    display: -webkit-flex;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+}
+#enigma, #wrong-guesses {
+    font: 2rem monospace;
+}
+#gallow {
+    height: 10rem;
+    border: 1px solid red;
+    min-width: 8em;
+}
+
+/* ============================ */
+#word-selection {
+    margin-bottom: 1rem;
+}
+#dict-result {
+    font-size: 0.8rem;
+}
