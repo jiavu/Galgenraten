@@ -60,7 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	socket.on("gameState", data => {
 		data = JSON.parse(data);
 		
-		messageBox.innerHTML = data.msg;
+    messageBox.innerHTML = data.msg;
+    enigma.innerHTML = "";
+    wrongGuesses.innerHTML = "";
 
 		resetClassHideElements();
 		
@@ -76,30 +78,48 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
         break;
       case "candidatesGuesses":
-        console.log(data);
         sectionRiddle.classList.remove("hidden");
-        
-        for (let i = 0; i < data.letterGuesses.length; i++) {
+
+        // write right and wrong guesses:
+        for (let i = 0; i < data.rightGuesses.length; i++) {
           let span = document.createElement("span");
-          span.innerText = "_";
+          span.innerText = data.rightGuesses[i] ?
+            data.rightGuesses[i] : "_";
           enigma.appendChild(span);
+        }
+        for (let i = 0; i < data.wrongGuesses.length; i++) {
+          let span = document.createElement("span");
+          span.innerText = data.wrongGuesses[i];
+          wrongGuesses.appendChild(span);
         }
 
         if (!data.iAmRiddler) {
           guessDiv.classList.remove("hidden");
+          submitGuess.querySelector("[type='submit']").disabled = false;
+          guessInput.disabled = false;
+          guessInput.focus();
         } else {
-          console.log("RIDDLER");
           sectionWord.classList.remove("hidden");
           dictionary.classList.remove("hidden");
         }
-
         break;
 			case "gameTerminated":
 				break;
 		}
 	});
 
-	// BUTTON AND TEXT FIELD INPUTS LISTENING:
+  // BUTTON AND TEXT FIELD INPUTS LISTENING:
+  
+  submitGuess.onsubmit = e => {
+    e.preventDefault();
+    let letter = guessInput.value;
+    guessInput.value = "";
+    e.target.querySelector("[type='submit']").disabled = true;
+    guessInput.disabled = true;
+    // send letter to server:
+    socket.emit("submitLetter", JSON.stringify({ letter }));
+  };
+
 	submitWord.onsubmit = e => {
 		e.preventDefault();
 		dictResult.innerHTML = "";
@@ -114,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			state: "sentToAPI"
 		}) );
 
+    // Request to dwds.de API:
 		let req = new Request( proxy + url + "?q=" + word, {
 				method: "GET"
 		});
@@ -141,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				} else {
 					dictResult.innerHTML = "Dies ist kein Substantiv. Bitte suche ein anderes Wort aus.";
           wordSelection.classList.remove("hidden");
-          // Cursor auf Eingabe
+          wordInput.focus();
 					socket.emit("submitWord", JSON.stringify({
 						state: "invalidWord",
 					}));
@@ -149,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			} else {
         dictResult.innerHTML = "...konnte dieses Wort nicht finden. Bitte suche ein anderes Wort aus.";
         wordSelection.classList.remove("hidden");
-        // Cursor auf Eingabe
+        wordInput.focus();
         socket.emit("submitWord", JSON.stringify({
           state: "invalidWord",
         }));
@@ -157,10 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
   };
   
-  submitGuess.onsubmit = e => {
-    e.preventDefault();
-  }
-
+  
 	// Restrict Players input. Only Letters accepted.
 	// and activate Submit if input has length.
 	const handleInput = e => {

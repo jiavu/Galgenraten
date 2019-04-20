@@ -18,6 +18,9 @@ const masterSays = {
 	lookUpWord : "Ich schlage das Wort nach...",
   dictionaryBroken : "Mein Wörterbuch ist kaputt!!! :(",
   wordIsNoun : "Das ist ein tolles Wort, das nehmen wir!",
+  letterAlreadyGuessed: "Den Buchstaben hatten wir schon!",
+  rightLetter: "Richtiger Buchstabe! :)",
+  wrongLetter: "Falscher Buschstabe. :/",
 };
 
 // Server
@@ -49,15 +52,17 @@ class Player {
 class StateToSend {
   constructor(  gameState, msg="",
                 iAmRiddler = false,
-                letterGuesses = [],
+                rightGuesses = [],
                 wrongGuesses = [],
-                gameOver = false ) {
+                roundIsOver = false,  // used?
+                gameOver = false ) {  // used?
 		this.gameState = gameState;
     this.msg = msg;
     this.iAmRiddler = iAmRiddler;
-    this.letterGuesses = letterGuesses;
+    this.rightGuesses = rightGuesses;
     this.wrongGuesses = wrongGuesses;
-		this.gameOver = gameOver; // probably unused.
+    this.roundIsOver = roundIsOver;
+		this.gameOver = gameOver;
 	}
 }
 
@@ -85,7 +90,7 @@ const gameStates = {
   riddler: {},
   candidate: {},
   word: "",
-  letterGuesses: [],
+  rightGuesses: [],
   wrongGuesses: [],
 
   welcome(socket, msg) {
@@ -159,8 +164,8 @@ const gameStates = {
 
   riddlerChoosesWord() {
     const state = "chooseWord";
-    let msg_riddler = `<span class="player">${this.riddler.name}</span>${masterSays.chooseAWord}`;
-    let msg_candidate = `<span class=opponent>${this.riddler.name}</span>${masterSays.chooseAWordWait}`;
+    let msg_riddler = `<span class="player">${this.riddler.name}</span>${masterSays.chooseAWord}`,
+        msg_candidate = `<span class=opponent>${this.riddler.name}</span>${masterSays.chooseAWordWait}`;
 
     this.riddler.socket.emit("gameState", JSON.stringify(
       new StateToSend(state, msg_riddler, true)
@@ -194,10 +199,10 @@ const gameStates = {
         break;
       case "wordIsNoun":
         console.log("Wort: " + data.word);
-        this.word = data.word;
-        this.letterGuesses = [];
+        this.word = data.word.toUpperCase();
+        this.rightGuesses = [];
         for (let i = 0; i < data.word.length; i++) {
-          this.letterGuesses.push(null);
+          this.rightGuesses.push(null);
         }
         msg = masterSays.wordIsNoun;
         players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
@@ -208,19 +213,69 @@ const gameStates = {
 
   candidatesGuesses() {
     const state = "candidatesGuesses";
-    let msg_candidate = `Also <span class="player">${this.candidate.name}</span>, dann mal los. Viel Erfolg! :)`;
-    let msg_riddler = `<span class="opponent">${this.candidate.name}</span> darf jetzt raten.`;
+    let msg_candidate = `Also <span class="player">${this.candidate.name}</span>,
+                        dann mal los. Viel Erfolg! :)`,
+        msg_riddler = `<span class="opponent">${this.candidate.name}</span>
+                      darf jetzt raten.`;
 
     this.candidate.socket.emit("gameState", JSON.stringify(
-        new StateToSend(state, msg_candidate, false, this.letterGuesses)
+        new StateToSend(state, msg_candidate, false, this.rightGuesses)
     ));
     this.riddler.socket.emit("gameState", JSON.stringify(
-      new StateToSend(state, msg_riddler, true, this.letterGuesses)
+      new StateToSend(state, msg_riddler, true, this.rightGuesses)
     ));
   },
 
-  receiveGuess() {
-    // continue here. event listener for guesses...
+  receiveGuess(data) {
+    const state = "candidatesGuesses";
+    let roundIsOver = false,
+        msg_candidate = "",
+        msg_riddler = "";
+    data = JSON.parse(data);
+    const letter = data.letter.toUpperCase();
+    //console.log("Candidates guess: " + data.letter);
+    let msg = "Eingereichter Buchstabe: " + letter + "</br>";
+    players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
+
+    if ( this.rightGuesses.includes(letter) || this.wrongGuesses.includes(letter) ) {
+      msg = masterSays.letterAlreadyGuessed;
+    } else if ( this.word.includes(letter) ) {
+      msg = masterSays.rightLetter;
+      //Adds the letter to Array:this.rightGuesses
+      //corresponding to all matching digits of this.word:
+      for (let i = 0; i < this.word.length; i++) {
+        if ( letter === this.word[i] ) this.rightGuesses[i] = letter;
+      }
+      roundIsOver = this.rightGuesses.includes(null) ? false : (
+        msg_riddler = `</br><span class="opponent">${this.candidate.name}</span>
+                        war erfolgreich. Spielerwechsel!`,
+        msg_candidate = `</br>Du hast das Wort erraten, <span class="player">
+                        ${this.candidate.name}</span>.
+                        Gut gemacht! :)</br>Spielerwechsel!`,
+        true
+      );
+    } else {
+      msg = masterSays.wrongLetter;
+      // Adds the wrong letter to Array:this.wrongGuesses:
+      this.wrongGuesses.push(letter);
+      // Is canditate still alive?
+      if (this.wrongGuesses.length >= 12) {
+        roundIsOver = true;
+        msg_riddler = `</br><span class="opponent">${this.candidate.name}</span>
+                      wurde gehängt. Spielerwechsel!`;
+        msg_candidate = `</br><span class="player">Du</span> wurdest gehängt. :(</br>
+                        Spielerwechsel!`;
+      }
+    }
+    timeoutIDs.push( setTimeout( () => {
+      this.candidate.socket.emit("gameState", JSON.stringify(
+        new StateToSend(state, msg + msg_candidate, false, this.rightGuesses, this.wrongGuesses, roundIsOver)
+      ));
+      this.riddler.socket.emit("gameState", JSON.stringify(
+        new StateToSend(state, msg + msg_riddler, true, this.rightGuesses, this.wrongGuesses, roundIsOver)
+      ));
+      // round is over? Spielerwechsel. Sonst continue.
+    }, 1000) );
   },
 
 
@@ -235,12 +290,12 @@ const gameStates = {
     this.riddler = {};
     this.candidate = {};
     this.word = "";
-    this.letterGuesses = [];
+    this.rightGuesses = [];
     this.wrongGuesses = [];
   
     players.forEach( p => {
       p.socket.emit("gameState", JSON.stringify(
-        new StateToSend("gameTerminated", masterSays.termination, false, {}, true)
+        new StateToSend("gameTerminated", masterSays.termination, false, {}, true, true)
       ));
     });
   }
@@ -269,6 +324,7 @@ io.on('connection', socket => {
     
     // REGISTER ALL LISTENERS HERE:
     socket.on("submitWord", gameStates.receiveWord.bind(gameStates));
+    socket.on("submitLetter", gameStates.receiveGuess.bind(gameStates));
 
 		// HANDLING DISCONNECTION
 		socket.on('disconnect', () => {
