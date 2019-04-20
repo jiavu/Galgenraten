@@ -17,7 +17,7 @@
 
 <body>
 	<div class="main-container">
-    <section style="border: 4px double grey">
+    <section style="border: 4px double grey; text-align:center;">
       <h1>GALGEN_ATEN</h1>
     </section>
 			<section>
@@ -27,27 +27,24 @@
 				<h4>Der Spiel-Master sagt...</h4>
 				<p id="message-box"></p>
 			</section>
-			<section id="riddle" class="hide hidden">
+			<section id="section-riddle" class="hide hidden">
 				<div>
-					<h3>Rätsel</h3>
-					<p id="enigma">
-						<!-- Jeder Buchstabe als Span? -->
-						_ _ _ _ _ _ _ _ _ _ _ _
-					</p>
+					<h3>Rätsel:</h3>
+					<p id="enigma"></p>
 				</div>
-				<div id="guess-div" class="hide">
-					<span>Deine Annahme:</span>
-					<form>
+				<div id="guess-div" class="hide hidden">
+					<h5>Deine Annahme:</h5>
+					<form id="submit-guess">
 						<input type="text" maxlength="1"
-								id="guess-input" size="1">
+                id="guess-input" size="1">
+            <div style="width: 1.5rem;"></div>
 						<input type="submit" value="Einreichen" disabled />
 					</form>
 				</div>
 				<div>
-					<h3>Hinrichtungsfortschritt:</h3>
+					<h5>Galgen</h5>
 					<div id="gallow-wrapper">
-						<div id="wrong-guesses" style="text-decoration: line-through">
-							B
+						<div id="wrong-guesses">
 						</div>
 						<div id="gallow">-Galgen-</div>
 					</div>

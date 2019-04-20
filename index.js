@@ -4,6 +4,8 @@
 let players = [];
 const maxPlayers = 2;
 
+let timeoutIDs = [];
+
 const masterSays = {
 	toMuchPlayers: "Kein Zugang zum Spiel mehr möglich, es gibt schon 2 Spieler.",
 	welcome: "Willkommen! :)",
@@ -14,8 +16,9 @@ const masterSays = {
 	chooseAWord : ", überlege dir nun ein Wort. Es muss ein Substantiv sein!",
 	chooseAWordWait : " überlegt sich nun ein Wort, wird warten so lange. :)",
 	lookUpWord : "Ich schlage das Wort nach...",
-	dictionaryBroken : "Mein Wörterbuch ist kaputt!!! :("
-}
+  dictionaryBroken : "Mein Wörterbuch ist kaputt!!! :(",
+  wordIsNoun : "Das ist ein tolles Wort, das nehmen wir!",
+};
 
 // Server
 const express = require("express");
@@ -44,11 +47,17 @@ class Player {
 }
 
 class StateToSend {
-	constructor(gameState, iAmRiddler=false, msg="", gameOver=false ) {
+  constructor(  gameState, msg="",
+                iAmRiddler = false,
+                letterGuesses = [],
+                wrongGuesses = [],
+                gameOver = false ) {
 		this.gameState = gameState;
-		this.iAmRiddler = iAmRiddler;
-		this.msg = msg;
-		this.gameOver = gameOver;
+    this.msg = msg;
+    this.iAmRiddler = iAmRiddler;
+    this.letterGuesses = letterGuesses;
+    this.wrongGuesses = wrongGuesses;
+		this.gameOver = gameOver; // probably unused.
 	}
 }
 
@@ -65,120 +74,177 @@ function registerPlayer(socket, no) {
 			let msg = masterSays.newPlayer;
 			p.socket.emit("message", JSON.stringify( { msg } ));
 		}
-	});
+  });
 }
 
 ///////////////////////////////////////////////
 // Game States
 
-function raffleBeginner() {
-  console.log("raffleBeginner");
-	let gameState = "raffleBeginner";
-	// raffling the beginner:
-	let rand = Math.random() * 200 + 1;
+const gameStates = {
 
-	setTimeout( ()=> {
-		// Inform all players about the raffling of the beginner:
-		players.forEach( p => {
-			// This will hide the hidden-elements on clients page -> reset.
-			p.socket.emit("gameState", JSON.stringify(
-				new StateToSend(gameState, false)
-			));
-			let msg = masterSays.raffle;
-			p.socket.emit("message", JSON.stringify( { msg } ));
-			rand > 100 ? (
-				players[0].isRiddler = true,
-				players[1].isRiddler = ! players[0].isRiddler
-			) : (
-				players[0].isRiddler = false,
-				players[1].isRiddler = ! players[0].isRiddler
-			)
-		});
+  riddler: {},
+  candidate: {},
+  word: "",
+  letterGuesses: [],
+  wrongGuesses: [],
 
-		setTimeout( ()=> {
+  welcome(socket, msg) {
+    socket.emit("gameState", JSON.stringify(
+      new StateToSend("welcome", msg, false)
+    ));
+  },
 
-      // issue:
-      // if both clients reconnect immedately one after another,
-      // .name can be undefined...
-			
-			let riddler = players.find( p => p.isRiddler );
-			let candidate = players.find( p => !p.isRiddler );
+  getRoles() {
+    this.riddler = players.find(p => p.isRiddler);
+    this.candidate = players.find(p => !p.isRiddler);
+    /* return {
+      riddler: this.riddler,
+      candidate: this.candidate
+    } */
+  },
 
-			let msg_riddler = `<span class="player">Du</span>
-							suchst als erstes ein Wort aus.<br>
-							<span class="opponent">${candidate.name}</span>
-							muss dieses erraten.`;
-			let msg_candidate = `<span class="opponent">${riddler.name}</span>
-							sucht als erstes ein Wort aus.<br>
-							<span class="player">Du</span> musst dieses erraten.`;
+  raffleBeginner() {
+    const state = "raffleBeginner";
+      timeoutIDs.push( setTimeout( () => {
+        // Inform all players about the raffling of the beginner:
+        let msg = masterSays.raffle;
+        players.forEach(p => {
+          p.socket.emit("gameState", JSON.stringify(
+            new StateToSend(state, msg, false)
+          ));
+        });
 
-			riddler.socket.emit("message", JSON.stringify({ msg: msg_riddler }));
-			candidate.socket.emit("message", JSON.stringify({ msg: msg_candidate }));
+        // Raffle the beginner:
 
-				/* Next round shouldn't be the raffle again.
-			make a new function,
-			Just switch isRiddler states then for both players.
-			// ...*/
-			setTimeout( chooseWord, 3000, riddler, candidate );
+        let rand = Math.random() * 200 + 1;
+        rand > 100 ? (
+          players[0].isRiddler = true,
+          players[1].isRiddler = !players[0].isRiddler
+        ) : (
+            players[0].isRiddler = false,
+            players[1].isRiddler = !players[0].isRiddler
+          );
 
-		}, 3000);
-	}, 2000);
-	
-}
+        // find Riddler and find Candidate:
+        gameStates.getRoles();
 
-function chooseWord(riddler, candidate) {
-	const gameState = "chooseWord";
-	let msg;
-	let msg_riddler = `<span class="player">${riddler.name}</span>${masterSays.chooseAWord}`;
-	let msg_candidate = `<span class=opponent>${riddler.name}</span>${masterSays.chooseAWordWait}`;
+        timeoutIDs.push( setTimeout( () => {
 
-	riddler.socket.emit("gameState", JSON.stringify(
-		new StateToSend(gameState, true, msg_riddler)
-	));
-	candidate.socket.emit("gameState", JSON.stringify(
-		new StateToSend(gameState, false, msg_candidate)
-	));
+          let msg_riddler = `<span class="player">Du</span>
+                          suchst als erstes ein Wort aus.<br>
+                          <span class="opponent">${this.candidate.name}</span>
+                          muss dieses erraten.`;
+          let msg_candidate = `<span class="opponent">${this.riddler.name}</span>
+                            sucht als erstes ein Wort aus.<br>
+                            <span class="player">Du</span> musst dieses erraten.`;
 
-	riddler.socket.on("submitWord", data => {
+          this.riddler.socket.emit("message", JSON.stringify({ msg: msg_riddler }));
+          this.candidate.socket.emit("message", JSON.stringify({ msg: msg_candidate }));
+
+          timeoutIDs.push( setTimeout(this.riddlerChoosesWord.bind(this), 3000) );
+
+        }, 3000) );
+
+      }, 2000));
+  },
+
+  switchRiddler() {
+    const state = "switchRiddler";
+    players[0].isRiddler = !players[1].isRiddler;
+    players[1].isRiddler = !players[0].isRiddler;
+    gameStates.getRoles();
+    // send an info that roles have changed... then:
+    gameStates.riddlerChoosesWord();
+  },
+
+  riddlerChoosesWord() {
+    const state = "chooseWord";
+    let msg_riddler = `<span class="player">${this.riddler.name}</span>${masterSays.chooseAWord}`;
+    let msg_candidate = `<span class=opponent>${this.riddler.name}</span>${masterSays.chooseAWordWait}`;
+
+    this.riddler.socket.emit("gameState", JSON.stringify(
+      new StateToSend(state, msg_riddler, true)
+    ));
+    this.candidate.socket.emit("gameState", JSON.stringify(
+      new StateToSend(state, msg_candidate, false)
+    ));
+  },
+
+  receiveWord(data) {
     data = JSON.parse(data);
-    
-		switch (data.state) {
-			case "sentToAPI":
-				msg = masterSays.lookUpWord;
-				players.forEach( p => p.socket.emit("message", JSON.stringify( { msg } )));
-				break;
-			case "fetchFailed":
-				msg = masterSays.dictionaryBroken;
-				players.forEach( p => p.socket.emit("message", JSON.stringify( { msg } )));
-				console.log(data.error);
-				break;
-			case "invalidWord":
-				msg_riddler = `<span class="player">${riddler.name}</span>,
-												suche ein neues Wort aus.`;
-				msg_candidate = `<span class=opponent>${riddler.name}</span>
-												sucht ein neues Wort aus. Wir warten nochmal.`;
-				riddler.socket.emit("message", JSON.stringify( {msg:msg_riddler} ));
-				candidate.socket.emit("message", JSON.stringify( {msg:msg_candidate} ));
-				break;
-			case "wordIsNoun":
-        console.log(data.word);
-        // hier geht es weiter.
-        // Sende eine kurze Nachricht an alle (setTimeout).
-        // rufe dann nächste gamestate function auf.
-				break;
-		}
-	} );
-}
+    let msg, msg_riddler, msg_candidate;
+
+    switch (data.state) {
+      case "sentToAPI":
+        msg = masterSays.lookUpWord;
+        players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
+        break;
+      case "fetchFailed":
+        msg = masterSays.dictionaryBroken;
+        players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
+        console.log(data.error);
+        break;
+      case "invalidWord":
+        msg_riddler = `<span class="player">${this.riddler.name}</span>,
+                      suche ein neues Wort aus.`;
+        msg_candidate = `<span class=opponent>${this.riddler.name}</span>
+                      sucht ein neues Wort aus. Wir warten nochmal.`;
+        this.riddler.socket.emit("message", JSON.stringify({ msg: msg_riddler }));
+        this.candidate.socket.emit("message", JSON.stringify({ msg: msg_candidate }));
+        break;
+      case "wordIsNoun":
+        console.log("Wort: " + data.word);
+        this.word = data.word;
+        this.letterGuesses = [];
+        for (let i = 0; i < data.word.length; i++) {
+          this.letterGuesses.push(null);
+        }
+        msg = masterSays.wordIsNoun;
+        players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
+        timeoutIDs.push( setTimeout(this.candidatesGuesses.bind(this), 3000) );
+        break;
+    }
+  },
+
+  candidatesGuesses() {
+    const state = "candidatesGuesses";
+    let msg_candidate = `Also <span class="player">${this.candidate.name}</span>, dann mal los. Viel Erfolg! :)`;
+    let msg_riddler = `<span class="opponent">${this.candidate.name}</span> darf jetzt raten.`;
+
+    this.candidate.socket.emit("gameState", JSON.stringify(
+        new StateToSend(state, msg_candidate, false, this.letterGuesses)
+    ));
+    this.riddler.socket.emit("gameState", JSON.stringify(
+      new StateToSend(state, msg_riddler, true, this.letterGuesses)
+    ));
+  },
+
+  receiveGuess() {
+    // continue here. event listener for guesses...
+  },
 
 
-function gameTermination(id) {
-	// players.find( p => p.id === id ).name; // left game.
-	players.forEach( p => {
-		p.socket.emit("gameState", JSON.stringify(
-			new StateToSend("gameTerminated", false, masterSays.termination, true)
-		));
-	});
-}
+  gameTermination(id) {
+    // players.find( p => p.id === id ).name; // left game.
+
+    // reset and delete all setTimeouts:
+    timeoutIDs.forEach( id => clearTimeout(id) );
+    timeoutIDs = [];
+
+    //reset progress and roles:
+    this.riddler = {};
+    this.candidate = {};
+    this.word = "";
+    this.letterGuesses = [];
+    this.wrongGuesses = [];
+  
+    players.forEach( p => {
+      p.socket.emit("gameState", JSON.stringify(
+        new StateToSend("gameTerminated", masterSays.termination, false, {}, true)
+      ));
+    });
+  }
+};
 
 
 ///////////////////////////////////////////////
@@ -198,24 +264,27 @@ io.on('connection', socket => {
 		} else {
 			registerPlayer(socket, 2);
 		}
-		
-		socket.emit("message", JSON.stringify({ msg }));
+    
+    gameStates.welcome(socket, msg);
+    
+    // REGISTER ALL LISTENERS HERE:
+    socket.on("submitWord", gameStates.receiveWord.bind(gameStates));
 
 		// HANDLING DISCONNECTION
 		socket.on('disconnect', () => {
       console.log(new Date());
 			console.log(socket.id + " hat die Verbindung unterbrochen.");
 			
-			players = players.filter( p => p.id !== socket.id );
+      players = players.filter( p => p.id !== socket.id );
 
 			if (players.length) {
 				let newPlayer1 = players[0].socket;
 				players = [];
 				registerPlayer(newPlayer1, 1);
-			}			
+			}
 
 			// If one player leaves and only one is left, game is over.
-			gameTermination(socket.id);
+			gameStates.gameTermination(socket.id);
 		});
 
 	} else {
@@ -224,8 +293,9 @@ io.on('connection', socket => {
 		}));
 	}
 
-	if ( players.length >= 2 ) raffleBeginner();
+	if ( players.length >= 2 ) gameStates.raffleBeginner();
 });
+
 
 // Server Listen
 httpServer.listen(8080, err => {

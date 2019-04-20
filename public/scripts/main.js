@@ -11,9 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
 	const proxy = "https://cors-anywhere.herokuapp.com/";
 
 	const messageBox = document.querySelector("#message-box");	// p
-	const infoBox = document.querySelector("#info-box");		// p
-	const guessInput = document.querySelector("#guess-input");	// input
-	const classHide = document.querySelectorAll(".hide");	// Node List
+  const infoBox = document.querySelector("#info-box");		// p
+
+  const classHide = document.querySelectorAll(".hide");	// Node List
+
+  const sectionRiddle = document.querySelector("#section-riddle");   // section
+  const enigma = document.querySelector("#enigma");
+  const guessDiv = document.querySelector("#guess-div");   // div
+  const submitGuess = document.querySelector("#submit-guess");   // form
+  const guessInput = document.querySelector("#guess-input");	// input
+  
+  const wrongGuesses = document.querySelector("#wrong-guesses");	// div
+  const gallow = document.querySelector("#gallow");   // div
+  
 	const sectionWord = document.querySelector("#section-word");	// section
 	const wordSelection = document.querySelector("#word-selection"); // div
 	const wordInput = document.querySelector("#word-input");	// input
@@ -38,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
 	socket.on("message", data => {
 		data = JSON.parse(data);
-		messageBox.innerHTML = data.msg;
+    messageBox.innerHTML = data.msg;
 	});
 	socket.on("writeInfo", data => {
 		data = JSON.parse(data);
@@ -64,7 +74,26 @@ document.addEventListener('DOMContentLoaded', () => {
 					sectionWord.classList.remove("hidden");
 					wordSelection.classList.remove("hidden");
 				}
-				break;
+        break;
+      case "candidatesGuesses":
+        console.log(data);
+        sectionRiddle.classList.remove("hidden");
+        
+        for (let i = 0; i < data.letterGuesses.length; i++) {
+          let span = document.createElement("span");
+          span.innerText = "_";
+          enigma.appendChild(span);
+        }
+
+        if (!data.iAmRiddler) {
+          guessDiv.classList.remove("hidden");
+        } else {
+          console.log("RIDDLER");
+          sectionWord.classList.remove("hidden");
+          dictionary.classList.remove("hidden");
+        }
+
+        break;
 			case "gameTerminated":
 				break;
 		}
@@ -126,7 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
 			}
 		});
-	};
+  };
+  
+  submitGuess.onsubmit = e => {
+    e.preventDefault();
+  }
 
 	// Restrict Players input. Only Letters accepted.
 	// and activate Submit if input has length.

@@ -1,6 +1,6 @@
 # Galgenraten
 
-A Server-based 2-Player word guessing game.
+A server-based 2-player word guessing game.
 Language: German
 
 ### Tech-Stack
