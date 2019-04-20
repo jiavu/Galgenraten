@@ -19,8 +19,8 @@ const masterSays = {
   dictionaryBroken : "Mein Wörterbuch ist kaputt!!! :(",
   wordIsNoun : "Das ist ein tolles Wort, das nehmen wir!",
   letterAlreadyGuessed: "Den Buchstaben hatten wir schon!",
-  rightLetter: "Richtiger Buchstabe! :)",
-  wrongLetter: "Falscher Buschstabe. :/",
+  rightLetter: "Richtiger Buchstabe!",
+  wrongLetter: "Falscher Buschstabe!",
 };
 
 // Server
@@ -155,11 +155,10 @@ const gameStates = {
 
   switchRiddler() {
     const state = "switchRiddler";
-    players[0].isRiddler = !players[1].isRiddler;
+    players[0].isRiddler = !players[0].isRiddler;
     players[1].isRiddler = !players[0].isRiddler;
     gameStates.getRoles();
-    // send an info that roles have changed... then:
-    gameStates.riddlerChoosesWord();
+    timeoutIDs.push( setTimeout( this.riddlerChoosesWord.bind(this), 3000) );
   },
 
   riddlerChoosesWord() {
@@ -201,6 +200,7 @@ const gameStates = {
         console.log("Wort: " + data.word);
         this.word = data.word.toUpperCase();
         this.rightGuesses = [];
+        this.wrongGuesses = [];
         for (let i = 0; i < data.word.length; i++) {
           this.rightGuesses.push(null);
         }
@@ -234,13 +234,14 @@ const gameStates = {
     data = JSON.parse(data);
     const letter = data.letter.toUpperCase();
     //console.log("Candidates guess: " + data.letter);
-    let msg = "Eingereichter Buchstabe: " + letter + "</br>";
+    let msg = "Eingereichter Buchstabe:</br>" + letter + "</br>";
     players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
 
     if ( this.rightGuesses.includes(letter) || this.wrongGuesses.includes(letter) ) {
       msg = masterSays.letterAlreadyGuessed;
     } else if ( this.word.includes(letter) ) {
       msg = masterSays.rightLetter;
+      msg_candidate = " :)";
       //Adds the letter to Array:this.rightGuesses
       //corresponding to all matching digits of this.word:
       for (let i = 0; i < this.word.length; i++) {
@@ -256,6 +257,7 @@ const gameStates = {
       );
     } else {
       msg = masterSays.wrongLetter;
+      msg_candidate = " :/";
       // Adds the wrong letter to Array:this.wrongGuesses:
       this.wrongGuesses.push(letter);
       // Is canditate still alive?
@@ -274,7 +276,8 @@ const gameStates = {
       this.riddler.socket.emit("gameState", JSON.stringify(
         new StateToSend(state, msg + msg_riddler, true, this.rightGuesses, this.wrongGuesses, roundIsOver)
       ));
-      // round is over? Spielerwechsel. Sonst continue.
+      
+      roundIsOver && this.switchRiddler();
     }, 1000) );
   },
 

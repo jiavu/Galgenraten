@@ -42,7 +42,7 @@ body {
   margin: 0 auto;
   min-width: 320px;
   max-width: 600px;
-  background-color: hsla(32, 40%, 90%, 0.85);
+  background-color: hsla(32, 40%, 90%, 0.89);
 }
 section {
   border-bottom: 2px solid grey;
@@ -77,6 +77,8 @@ input[type="submit"], input[type="text"] {
   color: var(--player);
 }
 #message-box {
+  min-height: 66px;  /* 2 lines */
+  min-height: 99px; /* 3 lines */
   line-height: 1.5;
   font-style: italic;
   font-size: 1.1rem;

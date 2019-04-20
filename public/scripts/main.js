@@ -10,9 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Because Access-Control-Allow-Origin Header is missing:
 	const proxy = "https://cors-anywhere.herokuapp.com/";
 
-	const messageBox = document.querySelector("#message-box");	// p
   const infoBox = document.querySelector("#info-box");		// p
-
+  const messageBox = document.querySelector("#message-box");	// p
+  
   const classHide = document.querySelectorAll(".hide");	// Node List
 
   const sectionRiddle = document.querySelector("#section-riddle");   // section
@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	socket.on("message", data => {
 		data = JSON.parse(data);
     messageBox.innerHTML = data.msg;
+    infoBox.scrollIntoView();
 	});
 	socket.on("writeInfo", data => {
 		data = JSON.parse(data);
@@ -61,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		data = JSON.parse(data);
 		
     messageBox.innerHTML = data.msg;
+    infoBox.scrollIntoView();
     enigma.innerHTML = "";
     wrongGuesses.innerHTML = "";
 
@@ -72,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			case "chooseWord":
 				wordInput.value = "";
 				if (data.iAmRiddler) {
+          messageBox.scrollIntoView();
 					// Show section-word and division word-selection:
 					sectionWord.classList.remove("hidden");
 					wordSelection.classList.remove("hidden");
@@ -79,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       case "candidatesGuesses":
         sectionRiddle.classList.remove("hidden");
+        messageBox.scrollIntoView();
 
         // write right and wrong guesses:
         for (let i = 0; i < data.rightGuesses.length; i++) {
@@ -97,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
           guessDiv.classList.remove("hidden");
           submitGuess.querySelector("[type='submit']").disabled = false;
           guessInput.disabled = false;
-          guessInput.focus();
+          // guessInput.focus();
         } else {
           sectionWord.classList.remove("hidden");
           dictionary.classList.remove("hidden");
@@ -162,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				} else {
 					dictResult.innerHTML = "Dies ist kein Substantiv. Bitte suche ein anderes Wort aus.";
           wordSelection.classList.remove("hidden");
-          wordInput.focus();
+          //wordInput.focus();
 					socket.emit("submitWord", JSON.stringify({
 						state: "invalidWord",
 					}));
@@ -170,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			} else {
         dictResult.innerHTML = "...konnte dieses Wort nicht finden. Bitte suche ein anderes Wort aus.";
         wordSelection.classList.remove("hidden");
-        wordInput.focus();
+        //wordInput.focus();
         socket.emit("submitWord", JSON.stringify({
           state: "invalidWord",
         }));

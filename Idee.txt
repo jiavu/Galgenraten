@@ -36,9 +36,34 @@ Ergebnis: [{"wortart":"Substantiv","input":"Haus","lemma":"Haus","url":"https://
 To Do:
 ------
 
+- Feature: Alle genommenen Wörter der Session speichern. Wenn Wort schon vorkam, muss
+  ein anderes Wort genommen werden.
+
+- Für Mobile:
+    - Scroll nach Spiel-Master-Nachricht (z. B. "Richtiger Buchstabe!") einen
+      kurzen Moment später mit der view wieder nach unten, damit man evtl. den Galgen sieht.
+      scrollIntoView(). (Aber so, dass das riddle Feld oben anliegt.)
+    - Fullscreen
+    - Keep Screen (and connection) alive
+
 - Die API-Abfrage ist auch über Proxy nicht immer erfolgreich.
     Wenn die API-Abfrage nicht möglich ist, was dann?
 
+BUGS:
+-----
+- Leerer Input kann als guess eingereicht werden, Eingabe wird als richtig
+  interpretiert.
+- Gießkanne !
+- ß wird direkt als SS-Eingabe interpretiert.
+- Verarbeitung ß: Eingabe bei guessInput nicht möglich.
+  Zudem, auf Serverseite Verarbeitung zu SS durch .toUpperCase, zuerst 
+  ohne Wortverlängerung. Der Guess von "e" erweitert das Wort dann auf die "richtige" Länge.
+  Ca. Zeile 201 in reveiveWord()
+- Auf Mobile: Eingabe von ß bei Wordguess nicht möglich.
+
+
+Was soll generell mit ß und Umlauten passieren?
+Evt. Regeln checken
 
 ========================================================
 TechStack:
