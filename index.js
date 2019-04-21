@@ -146,11 +146,11 @@ const gameStates = {
           this.riddler.socket.emit("message", JSON.stringify({ msg: msg_riddler }));
           this.candidate.socket.emit("message", JSON.stringify({ msg: msg_candidate }));
 
-          timeoutIDs.push( setTimeout(this.riddlerChoosesWord.bind(this), 3000) );
+          timeoutIDs.push( setTimeout(this.riddlerChoosesWord.bind(this), 4000) );
 
-        }, 3000) );
+        }, 4000) );
 
-      }, 2000));
+      }, 3000));
   },
 
   switchRiddler() {
@@ -158,7 +158,7 @@ const gameStates = {
     players[0].isRiddler = !players[0].isRiddler;
     players[1].isRiddler = !players[0].isRiddler;
     gameStates.getRoles();
-    timeoutIDs.push( setTimeout( this.riddlerChoosesWord.bind(this), 3000) );
+    timeoutIDs.push( setTimeout( this.riddlerChoosesWord.bind(this), 4000) );
   },
 
   riddlerChoosesWord() {
@@ -206,7 +206,7 @@ const gameStates = {
         }
         msg = masterSays.wordIsNoun;
         players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
-        timeoutIDs.push( setTimeout(this.candidatesGuesses.bind(this), 3000) );
+        timeoutIDs.push( setTimeout(this.candidatesGuesses.bind(this), 4000) );
         break;
     }
   },
@@ -278,7 +278,7 @@ const gameStates = {
       ));
       
       roundIsOver && this.switchRiddler();
-    }, 1000) );
+    }, 3000) );
   },
 
 

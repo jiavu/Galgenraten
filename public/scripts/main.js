@@ -31,7 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	const dictionary = document.querySelector("#dictionary");		// div
 	const dictResult = document.querySelector("#dict-result");	// p
 
-	const socket = io.connect();
+  const socket = io.connect();
+  
+  const durOut = 3, durIn = 3;
 
   //////////////////////////////////////////////////////////////////
   // HELPER:
@@ -39,16 +41,48 @@ document.addEventListener('DOMContentLoaded', () => {
 	function resetClassHideElements() {
 		// Reset hide sections and divisions:
 		for (let i = 0; i < classHide.length; i++) {
-			classHide[i].classList.add("hidden");
+      fadeChange(classHide[i], null, "hidden");
+			//classHide[i].classList.add("hidden");
 		}
-	}
+  }
+  
+  function fadeOnChange(element, newContent) {
+    TweenMax.to(element, durOut, {
+      visibility: 0,
+      backgroundColor: "red",
+      onComplete: () => {
+        element.innerHTML = newContent;
+        console.log("anim complete");
+        
+        TweenMax.to(element, durIn, {
+          visibility: 1,
+          backgroundColor: "green"
+        });
+      }
+    });
+  }
+
+  function fadeChange (element, newContent=null, classToAdd=null, classToRemove=null) {
+    // set fadeDurration to same value of transition time in css.
+    // element needs transition opacity in css.
+    const fadeDurration = 1500;
+    element.style.opacity = 0;
+    window.setTimeout( ()=> {
+      if (newContent) element.innerHTML = newContent;
+      if (classToRemove) element.classList.remove(classToRemove);
+      if (classToAdd) element.classList.add(classToAdd);
+      element.style.opacity = 1;
+    }, fadeDurration);
+  }
   
   //////////////////////////////////////////////////////////////////
   // LISTENING:
   
 	socket.on("message", data => {
-		data = JSON.parse(data);
-    messageBox.innerHTML = data.msg;
+    data = JSON.parse(data);
+    //fadeOnChange(messageBox, data.msg);
+    fadeChange(messageBox, data.msg);
+    //messageBox.innerHTML = data.msg;
     infoBox.scrollIntoView();
 	});
 	socket.on("writeInfo", data => {
@@ -60,8 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	// GET GAME STATES FROM SERVER:
 	socket.on("gameState", data => {
 		data = JSON.parse(data);
-		
-    messageBox.innerHTML = data.msg;
+    
+    //fadeOnChange(messageBox, data.msg);
+    fadeChange(messageBox, data.msg);
+    //messageBox.innerHTML = data.msg;
     infoBox.scrollIntoView();
     enigma.innerHTML = "";
     wrongGuesses.innerHTML = "";
