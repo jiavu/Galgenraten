@@ -5,6 +5,7 @@ let players = [];
 const maxPlayers = 2;
 
 let timeoutIDs = [];
+let msgSpeed = 4000;
 
 const masterSays = {
 	toMuchPlayers: "Kein Zugang zum Spiel mehr möglich, es gibt schon 2 Spieler.",
@@ -110,6 +111,7 @@ const gameStates = {
 
   raffleBeginner() {
     const state = "raffleBeginner";
+
       timeoutIDs.push( setTimeout( () => {
         // Inform all players about the raffling of the beginner:
         let msg = masterSays.raffle;
@@ -146,11 +148,11 @@ const gameStates = {
           this.riddler.socket.emit("message", JSON.stringify({ msg: msg_riddler }));
           this.candidate.socket.emit("message", JSON.stringify({ msg: msg_candidate }));
 
-          timeoutIDs.push( setTimeout(this.riddlerChoosesWord.bind(this), 4000) );
+          timeoutIDs.push( setTimeout(this.riddlerChoosesWord.bind(this), msgSpeed) );
 
-        }, 4000) );
+        }, msgSpeed) );
 
-      }, 3000));
+      }, msgSpeed));
   },
 
   switchRiddler() {
@@ -158,7 +160,7 @@ const gameStates = {
     players[0].isRiddler = !players[0].isRiddler;
     players[1].isRiddler = !players[0].isRiddler;
     gameStates.getRoles();
-    timeoutIDs.push( setTimeout( this.riddlerChoosesWord.bind(this), 4000) );
+    timeoutIDs.push( setTimeout( this.riddlerChoosesWord.bind(this), msgSpeed) );
   },
 
   riddlerChoosesWord() {
@@ -206,7 +208,8 @@ const gameStates = {
         }
         msg = masterSays.wordIsNoun;
         players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
-        timeoutIDs.push( setTimeout(this.candidatesGuesses.bind(this), 4000) );
+
+        timeoutIDs.push( setTimeout(this.candidatesGuesses.bind(this), msgSpeed) );
         break;
     }
   },
@@ -278,7 +281,7 @@ const gameStates = {
       ));
       
       roundIsOver && this.switchRiddler();
-    }, 3000) );
+    }, msgSpeed) );
   },
 
 

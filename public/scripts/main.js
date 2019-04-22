@@ -46,26 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
   }
   
-  function fadeOnChange(element, newContent) {
-    TweenMax.to(element, durOut, {
-      visibility: 0,
-      backgroundColor: "red",
-      onComplete: () => {
-        element.innerHTML = newContent;
-        console.log("anim complete");
-        
-        TweenMax.to(element, durIn, {
-          visibility: 1,
-          backgroundColor: "green"
-        });
-      }
-    });
-  }
-
-  function fadeChange (element, newContent=null, classToAdd=null, classToRemove=null) {
+    function fadeChange (element, newContent=null, classToAdd=null, classToRemove=null) {
     // set fadeDurration to same value of transition time in css.
     // element needs transition opacity in css.
-    const fadeDurration = 1500;
+    const fadeDurration = 1000;
     element.style.opacity = 0;
     window.setTimeout( ()=> {
       if (newContent) element.innerHTML = newContent;
@@ -80,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
 	socket.on("message", data => {
     data = JSON.parse(data);
-    //fadeOnChange(messageBox, data.msg);
     fadeChange(messageBox, data.msg);
     //messageBox.innerHTML = data.msg;
     infoBox.scrollIntoView();
@@ -95,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	socket.on("gameState", data => {
 		data = JSON.parse(data);
     
-    //fadeOnChange(messageBox, data.msg);
     fadeChange(messageBox, data.msg);
     //messageBox.innerHTML = data.msg;
     infoBox.scrollIntoView();
@@ -111,9 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
 				wordInput.value = "";
 				if (data.iAmRiddler) {
           messageBox.scrollIntoView();
-					// Show section-word and division word-selection:
-					sectionWord.classList.remove("hidden");
-					wordSelection.classList.remove("hidden");
+          // Show section-word and division word-selection:
+          fadeChange(sectionWord, null, null, "hidden");
+          fadeChange(wordSelection, null, null, "hidden");
+					//sectionWord.classList.remove("hidden");
+					//wordSelection.classList.remove("hidden");
 				}
         break;
       case "candidatesGuesses":
