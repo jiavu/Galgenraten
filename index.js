@@ -303,7 +303,7 @@ const gameStates = {
         ));
 
         roundIsOver && timeoutIDs.push(setTimeout( this.switchRiddler.bind(this), msgSpeed ) );
-      }, msgSpeed));
+      }, 1000));
     }
     
   },
