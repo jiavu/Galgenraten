@@ -33,39 +33,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const socket = io.connect();
   
-  const durOut = 3, durIn = 3;
-
-  //////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////
   // HELPER:
 
 	function resetClassHideElements() {
 		// Reset hide sections and divisions:
 		for (let i = 0; i < classHide.length; i++) {
-      fadeChange(classHide[i], null, "hidden");
-			//classHide[i].classList.add("hidden");
+      //fadeChange(classHide[i], null, "hidden");
+			classHide[i].classList.add("hidden");
 		}
   }
   
-    function fadeChange (element, newContent=null, classToAdd=null, classToRemove=null) {
-    // set fadeDurration to same value of transition time in css.
-    // element needs transition opacity in css.
-    const fadeDurration = 1000;
-    element.style.opacity = 0;
-    window.setTimeout( ()=> {
-      if (newContent) element.innerHTML = newContent;
-      if (classToRemove) element.classList.remove(classToRemove);
-      if (classToAdd) element.classList.add(classToAdd);
-      element.style.opacity = 1;
-    }, fadeDurration);
+  function drawGallow(step=0) {
+    const img = document.createElement("img");
+    img.src = `/img/gallow_${step}.png`;
+    img.alt = step;
+    img.classList.add("gallow-piece");
+    if (!step) {
+      gallow.innerHTML = "";  // reset if new round.
+      img.style.zIndex = 2;
+    }
+    gallow.appendChild(img);
   }
+
+  // unused
+  function fadeChange (element, newContent=null, classToAdd=null, classToRemove=null) {
+  // Element needs a transition setting for opacity in css.
+  const fadeDurration = 1000;
+  element.style.opacity = 0;
+  window.setTimeout( ()=> {
+    if (newContent) element.innerHTML = newContent;
+    if (classToRemove) element.classList.remove(classToRemove);
+    if (classToAdd) element.classList.add(classToAdd);
+    element.style.opacity = 1;
+  }, fadeDurration);
+}
   
   //////////////////////////////////////////////////////////////////
   // LISTENING:
   
 	socket.on("message", data => {
     data = JSON.parse(data);
-    fadeChange(messageBox, data.msg);
-    //messageBox.innerHTML = data.msg;
+    //fadeChange(messageBox, data.msg);
+    messageBox.innerHTML = data.msg;
     infoBox.scrollIntoView();
 	});
 	socket.on("writeInfo", data => {
@@ -76,15 +86,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// GET GAME STATES FROM SERVER:
 	socket.on("gameState", data => {
-		data = JSON.parse(data);
+    data = JSON.parse(data);
     
-    fadeChange(messageBox, data.msg);
-    //messageBox.innerHTML = data.msg;
+    //fadeChange(messageBox, data.msg);
+    messageBox.innerHTML = data.msg;
     infoBox.scrollIntoView();
     enigma.innerHTML = "";
     wrongGuesses.innerHTML = "";
 
-		resetClassHideElements();
+    resetClassHideElements();
+    // draw gallow:
+    drawGallow(data.wrongGuesses.length);
 		
 		// check if iAmRiddler;
 		// for gameState, go through a switch to display relevant areas.
@@ -92,15 +104,16 @@ document.addEventListener('DOMContentLoaded', () => {
 			case "chooseWord":
 				wordInput.value = "";
 				if (data.iAmRiddler) {
-          messageBox.scrollIntoView();
+          infoBox.scrollIntoView();
           // Show section-word and division word-selection:
-          fadeChange(sectionWord, null, null, "hidden");
-          fadeChange(wordSelection, null, null, "hidden");
-					//sectionWord.classList.remove("hidden");
-					//wordSelection.classList.remove("hidden");
+          //fadeChange(sectionWord, null, null, "hidden");
+          sectionWord.classList.remove("hidden");
+          //fadeChange(wordSelection, null, null, "hidden");
+					wordSelection.classList.remove("hidden");
 				}
         break;
       case "candidatesGuesses":
+        //fadeChange(sectionRiddle, null, null, "hidden");
         sectionRiddle.classList.remove("hidden");
         messageBox.scrollIntoView();
 
@@ -119,16 +132,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!data.iAmRiddler) {
           guessDiv.classList.remove("hidden");
-          submitGuess.querySelector("[type='submit']").disabled = false;
+          //fadeChange(guessDiv, null, null, "hidden");
           guessInput.disabled = false;
-          // guessInput.focus();
+          // guessInput.focus(); // distracting on mobile..
         } else {
           sectionWord.classList.remove("hidden");
+          //fadeChange(sectionWord, null, null, "hidden");
           dictionary.classList.remove("hidden");
+          //fadeChange(dictionary, null, null, "hidden");
         }
         break;
-			case "gameTerminated":
-				break;
+      case "roundIsOver":
+        sectionRiddle.classList.remove("hidden");
+        sectionWord.classList.remove("hidden");
+        dictionary.classList.remove("hidden");
+        guessDiv.classList.add("hidden");
+        break;
 		}
 	});
 
@@ -151,7 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
     word = word.slice(0,1).toUpperCase() + word.slice(1).toLowerCase();
     wordInput.value = "";
 		e.target.querySelector("[type='submit']").disabled = true;
-		wordSelection.classList.add("hidden");
+    wordSelection.classList.add("hidden");
+    //fadeChange(wordSelection, null, "hidden");
 
 		// Send a message to websocket server: Request is sent, Wort wird nachgeschlagen.
 		socket.emit("submitWord", JSON.stringify({
@@ -186,7 +206,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				} else {
 					dictResult.innerHTML = "Dies ist kein Substantiv. Bitte suche ein anderes Wort aus.";
           wordSelection.classList.remove("hidden");
-          //wordInput.focus();
+          //fadeChange(wordSelection, null, null, "hidden");
+          //wordInput.focus();  // disturbing on mobile.
 					socket.emit("submitWord", JSON.stringify({
 						state: "invalidWord",
 					}));
@@ -194,7 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
 			} else {
         dictResult.innerHTML = "...konnte dieses Wort nicht finden. Bitte suche ein anderes Wort aus.";
         wordSelection.classList.remove("hidden");
-        //wordInput.focus();
+        //fadeChange(wordSelection, null, null, "hidden");
+        //wordInput.focus();  // disturbing on mobile.
         socket.emit("submitWord", JSON.stringify({
           state: "invalidWord",
         }));
