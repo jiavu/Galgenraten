@@ -5,25 +5,28 @@
 Multiplayer-Mode:
 Der eine gibt ein Wort vor. Der andere muss es erraten.
 Die Überprüfung findet serverseitig statt.
-Der Galgen wird mit canvas gezeichnet.
+Der Galgen wird mit canvas gezeichnet. (nope)
 
 Regeln:
 - Nur Substantive
+- Länger als 2 Buchstaben
 - Nur im dwds registrierte Wörter.
+- Beim Buchstaben-Raten wird Groß- und Kleinschreibung ignoriert.
+- Eszet (ß) bleibt Eszet und wird nicht in 'ss' umgewandelt.
+- Umlaute (ÄÖÜ) werden ebenfalls als diese eingegeben.
 
-Features (je nach verfügbarer Zeit für die Projektarbeit):
 
+Features (je nach verfügbarer Zeit):
 ------------------------
 Es wird eine Überprüfung stattfinden, ob es dieses Wort gibt.
-(Dictionary API... finde ich eine auf deutsch, im Idealfall ohne Key und Account?) (ja)
 
 (Nach API-Abfrage) Hinweise, ob das Wort ein Hauptwort oder ein Adj usw. ist.
-Oder: Nur Hauptwörter akzeptiert, Überprüfe nach API-Abfrage.
+Nur Hauptwörter akzeptiert, Überprüfe nach API-Abfrage.
 
 API:
 ----
 Digitales Wörterbuch der deutschen Sprache
-https://www.dwds.de/d/api           // scheinbar auch kein Key notwendig
+https://www.dwds.de/d/api           // kein Key notwendig
 
 Abfrage: https://www.dwds.de/api/wb/snippet?q=Haus
 Ergebnis: [{"wortart":"Substantiv","input":"Haus","lemma":"Haus","url":"https://www.dwds.de/wb/Haus"}]
@@ -36,16 +39,7 @@ Ergebnis: [{"wortart":"Substantiv","input":"Haus","lemma":"Haus","url":"https://
 
 To Do:
 ------
-
-- Wörter sollen länger als 1 Buchstabe sein.
-
-- Feature: Alle genommenen Wörter der Session speichern. Wenn Wort schon vorkam, muss
-  ein anderes Wort genommen werden. (noch nicht fertig gebaut)
-
-- Die API-Abfrage ist auch über Proxy nicht immer erfolgreich.
-    Wenn die API-Abfrage nicht möglich ist, was dann?
-    Wenn API-Abrage scheitert, müsste es einen Neustart bzw. Neuversuch geben.
-
+    
 - Für Mobile:
     - Scroll nach Spiel-Master-Nachricht (z. B. "Richtiger Buchstabe!") einen
       kurzen Moment später mit der view wieder nach unten, damit man evtl. den Galgen sieht.
@@ -57,6 +51,7 @@ To Do:
 BUGS:
 -----
 - Auf Mobile: Eingabe von ß bei Wordguess nicht möglich.
+- Die API-Abfrage ist auch über Proxy nicht immer erfolgreich.
 
 
 ========================================================

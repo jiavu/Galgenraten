@@ -1,11 +1,19 @@
 'use strict';
 
+
 // Global Variables
 let players = [];
 const maxPlayers = 2;
 
 let timeoutIDs = [];
 let msgSpeed = 3300;
+
+
+// Digitales Wörterbuch der deutschen Sprache API:
+const url = "https://www.dwds.de/api/wb/snippet";
+// Because Access-Control-Allow-Origin Header is missing:
+const proxy = "https://cors-anywhere.herokuapp.com/";
+
 
 const masterSays = {
 	toMuchPlayers: "Kein Zugang zum Spiel mehr möglich, es gibt schon 2 Spieler.",
@@ -15,15 +23,19 @@ const masterSays = {
 	newPlayer : "Du hast einen Mitspieler bekommen. Nun kann es losgehen! :)",
 	raffle : "Ich lose nun aus, wer von euch anfängt. Wartet kurz...",
 	chooseAWord : ", überlege dir nun ein Wort. Es muss ein Substantiv sein!",
-	chooseAWordWait : " überlegt sich nun ein Wort, wird warten so lange. :)",
-	lookUpWord : "Ich schlage das Wort nach...",
+  chooseAWordWait : " überlegt sich nun ein Wort, wird warten so lange. :)",
   dictionaryBroken : "Mein Wörterbuch ist kaputt!!! :(",
+  wordToShort : "Das Wort ist zu kurz. Es muss mindestens 2 Buchstaben enthalten.",
+  lookUpWord : "Ich schlage das Wort nach...",
   alreadyTaken : "Dieses Wort hatten wir schon...",
+  wordNotFound : "Ich konnte dieses Wort nicht finden. Bitte suche ein anderes Wort aus.",
+  wordIsNotNoun : "Dies ist kein Substantiv. Bitte suche ein anderes Wort aus.",
   wordIsNoun : "Das ist ein tolles Wort, das nehmen wir!",
   letterAlreadyGuessed: "Den Buchstaben hatten wir schon!",
   rightLetter: "Richtiger Buchstabe!",
   wrongLetter: "Falscher Buschstabe!",
 };
+
 
 // Server
 const express = require("express");
@@ -37,6 +49,10 @@ const httpServer = http.Server(server);
 // Websocket
 const socketIo = require("socket.io");
 let io = socketIo(httpServer);
+
+// Axios for http requests (comfortable way)
+const axios = require('axios');
+
 
 ///////////////////////////////////////////////
 // Classes
@@ -54,19 +70,22 @@ class Player {
 class StateToSend {
   constructor(  gameState = "", msg="",
                 iAmRiddler = false,
+                dictData = {},
                 rightGuesses = [],
                 wrongGuesses = [],
-                roundIsOver = false,  // used?
-                gameOver = false ) {  // used?
+                roundIsOver = false,  // used? Probably unnecessary.
+                gameOver = false ) {  // used? Probably unnecessary.
 		this.gameState = gameState;
     this.msg = msg;
     this.iAmRiddler = iAmRiddler;
+    this.dictData = dictData;
     this.rightGuesses = rightGuesses;
     this.wrongGuesses = wrongGuesses;
     this.roundIsOver = roundIsOver;
 		this.gameOver = gameOver;
 	}
 }
+
 
 ///////////////////////////////////////////////
 // Helper
@@ -84,6 +103,7 @@ function registerPlayer(socket, no) {
   });
 }
 
+
 ///////////////////////////////////////////////
 // Game States
 
@@ -91,6 +111,7 @@ const gameStates = {
 
   riddler: {},
   candidate: {},
+  dictData : {},
   word: "",
   rightGuesses: [],
   wrongGuesses: [],
@@ -184,52 +205,104 @@ const gameStates = {
     ));
   },
 
-  receiveWord(data) {
-    data = JSON.parse(data);
+  receiveWord(dataRiddler) {
+
     let msg, msg_riddler, msg_candidate;
 
-    switch (data.state) {
-      case "sentToAPI":
-        msg = masterSays.lookUpWord;
-        players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
-        break;
-      case "fetchFailed":
-        msg = masterSays.dictionaryBroken;
-        players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
-        console.log(data.error);
-        break;
-      case "invalidWord":
-        msg_riddler = `<span class="player">${this.riddler.name}</span>,
-                      suche ein neues Wort aus.`;
-        msg_candidate = `<span class=opponent>${this.riddler.name}</span>
-                      sucht ein neues Wort aus. Wir warten nochmal.`;
-        this.riddler.socket.emit("message", JSON.stringify({ msg: msg_riddler }));
-        this.candidate.socket.emit("message", JSON.stringify({ msg: msg_candidate }));
-        break;
-      case "wordIsNoun":
-        console.log("Eingereichtes Wort: " + data.word);
-        if (! this.wordsTaken.includes(data.word) ) {
-          this.word = "";
-          // save word with uppercase letters, unless it is "ß":
-          for (let i = 0; i < data.word.length; i++) {
-            this.word += data.word[i] === "ß" ? "ß" : data.word[i].toUpperCase();
-          }
-          this.rightGuesses = [];
-          this.wrongGuesses = [];
-          this.wordsTaken.push(data.word);
-          for (let i = 0; i < data.word.length; i++) {
-            this.rightGuesses.push(null);
-          }
-          msg = masterSays.wordIsNoun;
-          players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
-  
-          timeoutIDs.push( setTimeout(this.candidatesGuesses.bind(this), msgSpeed) );
-        } else {
-          msg = masterSays.alreadyTaken;
-          players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
+    const invalidWord = () => {
+      msg_riddler = `<span class="player">${this.riddler.name}</span>,
+            suche ein neues Wort aus.`;
+      msg_candidate = `<span class=opponent>${this.riddler.name}</span>
+            sucht ein neues Wort aus. Wir warten nochmal.`;
+
+      this.candidate.socket.emit("message", JSON.stringify({ msg: msg_candidate }));
+
+      this.riddler.socket.emit("gameState", JSON.stringify(
+        new StateToSend("chooseWord", msg_riddler, true)
+      ));
+    };
+
+    dataRiddler = JSON.parse(dataRiddler);
+
+    // word length has to be > 1.
+    if (dataRiddler.word.length < 2) {
+      msg_riddler = masterSays.wordToShort;
+      this.riddler.socket.emit("gameState", JSON.stringify(
+        new StateToSend("wordToShort", msg_riddler, true)
+      ));
+      timeoutIDs.push( setTimeout(invalidWord.bind(this), msgSpeed) );
+    
+    // has word already been taken in this session?
+    } else if ( this.wordsTaken.includes(dataRiddler.word) ){
+      msg = masterSays.alreadyTaken;
+      players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
+      timeoutIDs.push( setTimeout(invalidWord.bind(this), 1000) );
+    
+    // Game Master looks up word, requests dictionary API:
+    } else {
+      msg = masterSays.lookUpWord;
+      players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
+
+      //////////////////////////
+      // REQUEST TO dwds.de API:
+      axios.get(proxy + url + "?q=" + dataRiddler.word, {
+        headers: {
+          origin: null
+          /* 'X-Requested-With': "XMLHttpRequest" */
         }
-        
-        break;
+      })
+        .then(response => {
+          const data = response.data;
+          console.log("Treffer im Wörterbuch: " + response.data);
+
+          if (data.length) {
+            // send API response to riddler:
+            this.riddler.socket.emit("gameState", JSON.stringify(
+              new StateToSend("dictResult", "", true, data)
+            ));
+  
+            // if word is a noun:
+            if (data[0].wortart === "Substantiv") {
+              this.dictData = data;
+              console.log("Neu eingereichtes Wort: " + data[0].lemma);
+              this.word = "";
+              // save word with uppercase letters, unless it is "ß":
+              for (let i = 0; i < data[0].lemma.length; i++) {
+                this.word += data[0].lemma[i] === "ß" ? "ß" : data[0].lemma[i].toUpperCase();
+              }
+              this.rightGuesses = [];
+              this.wrongGuesses = [];
+              this.wordsTaken.push(data[0].lemma);
+              for (let i = 0; i < data[0].lemma.length; i++) {
+                this.rightGuesses.push(null);
+              }
+              msg = masterSays.wordIsNoun;
+              players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
+  
+              timeoutIDs.push(setTimeout(this.candidatesGuesses.bind(this), msgSpeed));
+            
+            // word is not noun:
+            } else {
+              msg_riddler = masterSays.wordIsNotNoun;
+              this.riddler.socket.emit("message", JSON.stringify({ msg: msg_riddler }));
+              timeoutIDs.push( setTimeout(invalidWord.bind(this), msgSpeed) );
+            }
+  
+          // no results (response = empty array), couldn't find word:
+          } else {
+            msg_riddler = masterSays.wordNotFound;
+            this.riddler.socket.emit("message", JSON.stringify({ msg: msg_riddler} ));
+            timeoutIDs.push( setTimeout(invalidWord.bind(this), msgSpeed) );
+            
+            // wordSelection.classList.remove("hidden");
+          }
+        })
+        .catch(err => {
+          console.log(err);
+          msg = masterSays.dictionaryBroken;
+          players.forEach(p => p.socket.emit("message", JSON.stringify({ msg })));
+          timeoutIDs.push( setTimeout(this.riddlerChoosesWord.bind(this), msgSpeed) ) ;
+        });
     }
   },
 
@@ -241,10 +314,10 @@ const gameStates = {
                       darf jetzt raten.`;
 
     this.candidate.socket.emit("gameState", JSON.stringify(
-        new StateToSend(state, msg_candidate, false, this.rightGuesses)
+        new StateToSend(state, msg_candidate, false, {}, this.rightGuesses)
     ));
     this.riddler.socket.emit("gameState", JSON.stringify(
-      new StateToSend(state, msg_riddler, true, this.rightGuesses)
+      new StateToSend(state, msg_riddler, true, this.dictData, this.rightGuesses)
     ));
   },
 
@@ -253,7 +326,8 @@ const gameStates = {
     let roundIsOver = false,
         msg_candidate = "",
         msg_riddler = "",
-        letter;
+        letter,
+        solution = {};
     data = JSON.parse(data);
     if (data.letter) {
       letter = data.letter === "ß" ? "ß" : data.letter.toUpperCase();
@@ -273,6 +347,7 @@ const gameStates = {
         }
         roundIsOver = this.rightGuesses.includes(null) ? false : (
           state = "roundIsOver",
+          solution = this.dictData,
           msg_riddler = `</br><span class="opponent">${this.candidate.name}</span>
                         war erfolgreich.`,
           msg_candidate = `</br>Du hast das Wort erraten, <span class="player">
@@ -289,6 +364,7 @@ const gameStates = {
         if (this.wrongGuesses.length >= 12) {
           roundIsOver = true;
           state = "roundIsOver";
+          solution = this.dictData;
           msg_riddler = `</br><span class="opponent">${this.candidate.name}</span>
                       wurde gehängt.`;
           msg_candidate = `</br><span class="player">Du</span> wurdest gehängt. :(</br>`;
@@ -296,10 +372,10 @@ const gameStates = {
       }
       timeoutIDs.push(setTimeout( () => {
         this.candidate.socket.emit("gameState", JSON.stringify(
-          new StateToSend(state, msg + msg_candidate, false, this.rightGuesses, this.wrongGuesses, roundIsOver)
+          new StateToSend(state, msg + msg_candidate, false, solution, this.rightGuesses, this.wrongGuesses, roundIsOver)
         ));
         this.riddler.socket.emit("gameState", JSON.stringify(
-          new StateToSend(state, msg + msg_riddler, true, this.rightGuesses, this.wrongGuesses, roundIsOver)
+          new StateToSend(state, msg + msg_riddler, true, this.dictData, this.rightGuesses, this.wrongGuesses, roundIsOver)
         ));
 
         roundIsOver && timeoutIDs.push(setTimeout( this.switchRiddler.bind(this), msgSpeed ) );
@@ -326,7 +402,7 @@ const gameStates = {
   
     players.forEach( p => {
       p.socket.emit("gameState", JSON.stringify(
-        new StateToSend("gameTerminated", masterSays.termination, false, {}, true, true)
+        new StateToSend("gameTerminated", masterSays.termination, false, {}, [], [], true, true)
       ));
     });
   }
