@@ -10,5 +10,3 @@ Language: German
 + API dwds.de
 + JavaScript
 + HTML
-
-delete me
